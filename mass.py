@@ -1,6 +1,7 @@
 # code qui va être utilisé pour calculer la masse du sol et des tubes, à partir de la géométrie créée avec gmsh_utils.py
 import numpy as np
 import scipy.sparse as sp
+from scipy.sparse import lil_matrix
 
 
 # ==============================================================================

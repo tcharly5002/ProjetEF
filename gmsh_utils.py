@@ -20,7 +20,7 @@ def load_geometry(filename = "sonde.msh"):
 
     #création des surfaces du sol et des tubes
     #rectangle centré en (0,0) de longueur L_sol et de largeur L_sol
-    rectangle = gmsh.model.occ.addRectangle(-L_sol/2, -L_sol/2, 0, 2*L_sol, L_sol)
+    rectangle = gmsh.model.occ.addRectangle(-L_sol/2, -L_sol/2, 0, L_sol, L_sol)
 
     #les deux tubes
     tube1 = gmsh.model.occ.addDisk(-d_p/2, 0, 0, R_tube, R_tube)
@@ -28,6 +28,7 @@ def load_geometry(filename = "sonde.msh"):
 
     #chat -> soustraction booléene : sol = rectangle - tube1 - tube2
     out_surface, out_map = gmsh.model.occ.cut([(2, rectangle)], [(2, tube1), (2, tube2)])
+    gmsh.model.occ.synchronize() #synchronisation pour que les changements soient pris en compte
     # -> out_surface, out_map je ne comprends pas bien.
 
     # création des frontières
@@ -95,10 +96,29 @@ def load_geometry(filename = "sonde.msh"):
     gmsh.model.mesh.generate(2)
     #gmsh.write("sonde.msh") #si on veut sauvegarder le maillage
 
-    if 'close' not in sys.argv:
+    #Ectraction des données du maillage pour le reste du projet
+    elemType2D = gmsh.model.mesh.getElementType("triangle", 1)
+    nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes()
+    elemTags, elemNodeTags = gmsh.model.mesh.getElementsByType(elemType2D)
+
+    boundaries = {
+        "ext": gmsh.model.mesh.getNodesForPhysicalGroup(1, gmsh.model.getEntitiesForPhysicalName("boundary_ext")[0][1])[0],
+        "in": gmsh.model.mesh.getNodesForPhysicalGroup(1, gmsh.model.getEntitiesForPhysicalName("boundary_in")[0][1])[0],
+        "out": gmsh.model.mesh.getNodesForPhysicalGroup(1, gmsh.model.getEntitiesForPhysicalName("boundary_out")[0][1])[0]
+    }
+
+    if 'visu' in sys.argv:
         gmsh.fltk.run()
 
-    gmsh.finalize()
+    # === ATTENTION ===
+    # J'ai retiré gmsh.finalize() car si on ferme ici, les données nodeTags, etc. 
+    # disparaissent de la mémoire avant que le main.py puisse les lire.
+    # On fermera Gmsh à la toute fin du projet.
+    # ==================pas oublié de faire ça dans le main===
+    
+    return elemType2D, nodeTags, nodeCoords, elemTags, elemNodeTags, boundaries
 
 if __name__ == "__main__":
-    generate_geothermal_mesh()
+    load_geometry()
+    gmsh.finalize() #ici on peut le mettre parce que c'est juste un test pour voir la géométrie, pas besoin de garder les données en mémoire après.
+    
