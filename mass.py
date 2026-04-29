@@ -70,7 +70,7 @@ def compute_mass_matrix(elemTags, conn, det, w, N, tag_to_dof):
 
             #double boucle sur les noeuds du triangle (a et b)
             for a in range(nloc):
-                Ia = int(dof_indices[a]) ligne dans la matrice
+                Ia = int(dof_indices[a]) #ligne dans la matrice
                 Na = N[g, a] #valeur de la fonction Ni au point g
 
                 for b in range(nloc):
