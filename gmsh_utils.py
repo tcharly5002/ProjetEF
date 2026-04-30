@@ -128,7 +128,13 @@ def load_geometry(d_p=2.0):   ## d_p = distance entre les deux tubes, on peut la
     # On fermera Gmsh à la toute fin du projet.
     # ==================pas oublié de faire ça dans le main===
     
-    return elemType2D, nodeTags, nodeCoords, elemTags, elemNodeTags, boundaries
+    boundary_tags = {
+        "ext": boundary_ext,
+        "in": boundary_in,
+        "out": boundary_out
+    }
+
+    return elemType2D, nodeTags, nodeCoords, elemTags, elemNodeTags, boundaries, boundary_tags
 
 if __name__ == "__main__":
     load_geometry()
