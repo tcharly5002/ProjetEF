@@ -54,4 +54,16 @@ def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kap
     #FORMULE : k[i,j] += ∫(h * Ni * Nj) dΓ
     #=================
 
-    
+    #on récupère les éléments de bordure pour les tubes in et out
+    for tube_key in ["in", "out"]:
+        #on demande à Gmsh les éléments de la ligne (1D) sur ces frontières
+        #on suppose que noundary_in/out sont des physical groups de dimension 1 (ligne) dans Gmsh
+        dim_bnd = 1
+        try :
+            #on récupère les tags des éléments de bordure pour ce tube
+            phys_tag = gmsh.model.getEntitiesForPhysicalName(f"boundary_{tube_key}")[0][1]
+            elemTypesBnd, elemTagsBnd, elemNodeTagsBnd = gmsh.model.mesh.getElements(dim_bnd, phys_tag)
+
+            eTypeBnd = elemTypesBnd[0] 
+            eNodesBnd = elemNodeTagsBnd[0].reshape(-1, order + 1)
+            
