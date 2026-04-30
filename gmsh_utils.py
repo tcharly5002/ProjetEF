@@ -4,6 +4,35 @@ import gmsh
 import numpy as np
 import sys
 
+def border_dofs_from_tags(l_tags, tag_to_dof):
+    # Convertit les tags Gmsh (non consécutifs) en indices 0-based dans la matrice globale
+    l_tags = np.asarray(l_tags, dtype=int)
+    # tag_to_dof[tag] vaut -1 si le tag n'a pas de DoF associé (ex: points géométriques purs)
+    valid_mask = (tag_to_dof[l_tags] != -1)
+    l_dofs = tag_to_dof[l_tags[valid_mask]]
+    return l_dofs
+
+
+def prepare_quadrature_and_basis(elemType, order):
+    """
+    Returns:
+      xi (flattened uvw), w (ngp), N (flattened bf), gN (flattened gbf)
+    """
+    rule = f"Gauss{2 * order}"
+    xi, w = gmsh.model.mesh.getIntegrationPoints(elemType, rule)
+    _, N, _ = gmsh.model.mesh.getBasisFunctions(elemType, xi, "Lagrange")
+    _, gN, _ = gmsh.model.mesh.getBasisFunctions(elemType, xi, "GradLagrange")
+    return xi, np.asarray(w, dtype=float), N, gN
+
+def get_jacobians(elemType, xi, tag=-1):
+    """
+    Wrapper around gmsh.getJacobians.
+    Returns (jacobians, dets, coords)
+    """
+    jacobians, dets, coords = gmsh.model.mesh.getJacobians(elemType, xi, tag=tag)
+    return jacobians, dets, coords
+
+
 def load_geometry(d_p=2.0):   ## d_p = distance entre les deux tubes, on peut la changer pour voir l'effet sur le maillage et les résultats
     gmsh.initialize()
 
@@ -128,13 +157,7 @@ def load_geometry(d_p=2.0):   ## d_p = distance entre les deux tubes, on peut la
     # On fermera Gmsh à la toute fin du projet.
     # ==================pas oublié de faire ça dans le main===
     
-    boundary_tags = {
-        "ext": boundary_ext,
-        "in": boundary_in,
-        "out": boundary_out
-    }
-
-    return elemType2D, nodeTags, nodeCoords, elemTags, elemNodeTags, boundaries, boundary_tags
+    return elemType2D, nodeTags, nodeCoords, elemTags, elemNodeTags, boundaries
 
 if __name__ == "__main__":
     load_geometry()

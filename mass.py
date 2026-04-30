@@ -45,13 +45,13 @@ def compute_mass_matrix(elemTags, conn, det, w, N, tag_to_dof):
     #données d'entrée 
     ne = len(elemTags) #nombre d'éléments (triangles dans le maillage)
     ngp = len(w) #nombre de points de gauss par élément
-    nloc = int(len(conn) // ne) #nombre de noeuds par élément (3 pour des triangles)
+    nloc = int(len(conn) // ne) #nombre de noeuds par élément (3 pour des triangles) --> ici conn c'est ElemNodeTags
     nn = int(np.max(tag_to_dof) + 1) #nombre total de degrés de liberté (noeuds totaux)
 
     #on redimensionne les listes plates de Gmsh pour aller dedans plus facilement
     det = np.asarray(det, dtype=np.float64).reshape(ne, ngp) #det(J) pour chaque élément et chaque point de gauss
     conn = np.asarray(conn, dtype=np.int64).reshape(ne, nloc) #listes de noeuds pour chaque élément
-    N = np.asarray(N, dtype=np.float64).reshape(ngp, nloc) #valeurs des Ni aux points de gauss -> pas trop bien compris
+    N = np.asarray(N, dtype=np.float64).reshape(ngp, nloc) #valeurs des fonctions de forme aux points de gauss, permet de faire le calcul de gauss = faire le calcul de l'intégrale 
 
     #on vient créer notre matrice vide 
     M = lil_matrix((nn, nn), dtype=np.float64)
@@ -66,7 +66,7 @@ def compute_mass_matrix(elemTags, conn, det, w, N, tag_to_dof):
 
         #on boucle sur les points de gauss de l'élément
         for g in range(ngp): #on boucle sur les points de gauss de l'élément
-            wg = w[g] #poids du point de gauss g -> c'est quoi dans notre calcul ?
+            wg = w[g] #poids du point de gauss g -> c'est quoi dans notre calcul ? réponse : va voir ce que c'est le principe de la quadrature de gauss
             detg = det[e, g] #taille du triangle (élément) à cet endroit
 
             #double boucle sur les noeuds du triangle (a et b)
