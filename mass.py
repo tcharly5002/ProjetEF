@@ -53,8 +53,8 @@ def compute_mass_matrix(elemTags, conn, det, w, N, tag_to_dof):
     conn = np.asarray(conn, dtype=np.int64).reshape(ne, nloc) #listes de noeuds pour chaque élément
     N = np.asarray(N, dtype=np.float64).reshape(ngp, nloc) #valeurs des Ni aux points de gauss -> pas trop bien compris
 
-    #on vietn cr&er notre matrice vide 
-    M = lil.matrix((nn, nn), dtype=np.float64)
+    #on vient créer notre matrice vide 
+    M = lil_matrix((nn, nn), dtype=np.float64)
 
     #on assemble la matrice de masse
 
@@ -80,5 +80,8 @@ def compute_mass_matrix(elemTags, conn, det, w, N, tag_to_dof):
 
                     #formule finale
                     #poids * valeur de Ni * valeur de Nj * det(J)
-                    # notre rho * cp n'est pas là main on le rajoute dans le main donc ça va.
-                    M[Ia, Ib] += wg * Na * N[g, b] * detg
+                    # notre rho * cp n'est pas là; on le rajoute dans le main
+                    M[Ia, Ib] += wg * Na * Nb * detg
+
+    # Retourner la matrice (au format lil_matrix). Le caller peut convertir en CSR si nécessaire.
+    return M

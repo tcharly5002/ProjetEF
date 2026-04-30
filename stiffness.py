@@ -60,10 +60,36 @@ def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kap
         #on suppose que noundary_in/out sont des physical groups de dimension 1 (ligne) dans Gmsh
         dim_bnd = 1
         try :
-            #on récupère les tags des éléments de bordure pour ce tube
+            #Ici on demande à Gmsh :"Donne moi tout les petits segments de droite qui forme le cercle du tube d'entrée/sortie"
             phys_tag = gmsh.model.getEntitiesForPhysicalName(f"boundary_{tube_key}")[0][1]
             elemTypesBnd, elemTagsBnd, elemNodeTagsBnd = gmsh.model.mesh.getElements(dim_bnd, phys_tag)
 
             eTypeBnd = elemTypesBnd[0] 
             eNodesBnd = elemNodeTagsBnd[0].reshape(-1, order + 1)
-            
+
+            xiBnd , wBnd = gmsh.model.mesh.getIntegrationPoints(eTypeBnd, f"Gauss{2*order}") #points de gauss pour les éléments de bordure
+            _, NBnd, _ = gmsh.model.mesh.getBasisFunctions(eTypeBnd, xiBnd, "Lagrange")
+            NBnd =NBnd.reshape(len(wBnd), -1)
+
+            #xiBnd : La position des points de calcul sur le segment.
+            #wBnd : Le poids (l'importance) de chaque point.
+            #NBnd : La valeur des fonctions de forme sur ces points.
+
+
+
+            jacBnd, detBnd, _ = gmsh.model.mesh.getJacobians(eTypeBnd, xiBnd, tag=phys_tag)
+            detBnd = detBnd.reshape(-1, len(wBnd))
+
+            # Assemblage de la matrice de masse de bordure (Robin)
+            for i_el in range(len(eNodesBnd)):
+                nodes = eNodesBnd[i_el]
+                dofs = tag_to_dof[nodes]
+                for g in range(len(wBnd)):
+                    for a in range(len(nodes)):
+                        Ia = int(dofs[a])
+                        for b in range(len(nodes)):
+                            Ib = int(dofs[b])
+                            # Formule : h * Ni * Nj * detJ_1D
+                            K[Ia, Ib] += wBnd[g] * h_coef * NBnd[g,a] * NBnd[g,b] * detBnd[i_el, g]
+        except:
+            print(f"Erreur ou absence de la frontière boundary_{tube_key}")
