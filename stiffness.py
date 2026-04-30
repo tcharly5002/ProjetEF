@@ -93,3 +93,55 @@ def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kap
                             K[Ia, Ib] += wBnd[g] * h_coef * NBnd[g,a] * NBnd[g,b] * detBnd[i_el, g]
         except:
             print(f"Erreur ou absence de la frontière boundary_{tube_key}")
+
+
+
+
+"""
+Maintenant on va faire la partie de droite de notre équation c-a-d le vecteur de charge (f) 
+dû à la température du fluide dans les tubes d'entrée et de sortie.
+Formule : f[i] = ∫(h * T_fluid * Ni) dΓ
+"""
+
+
+#=============+
+#celui là j'avais la flemme de tout vérif je pense qu'il est juste mais peut-être à revoir
+#=============+
+
+
+def assemble_rhs_robin(num_dofs, tag_to_dof, h_coef, T_f_in, T_f_out, order):
+
+    F = np.zeros(num_dofs)
+    dim_bnd = 1
+
+    # On boucle sur les deux tubes car ils peuvent avoir des températures différentes
+    fluid_temps = {"in": T_f_in, "out": T_f_out}
+
+    for tube_key, T_fluid in fluid_temps.items():
+        try:
+            phys_tag = gmsh.model.getEntitiesForPhysicalName(f"boundary_{tube_key}")[0][1]
+            elemTypesBnd, elemTagsBnd, elemNodeTagsBnd = gmsh.model.mesh.getElements(dim_bnd, phys_tag)
+            
+            eTypeBnd = elemTypesBnd[0]
+            eNodesBnd = elemNodeTagsBnd[0].reshape(-1, order + 1)
+            
+            xiBnd, wBnd = gmsh.model.mesh.getIntegrationPoints(eTypeBnd, f"Gauss{2*order}")
+            _, NBnd, _ = gmsh.model.mesh.getBasisFunctions(eTypeBnd, xiBnd, "Lagrange")
+            NBnd = NBnd.reshape(len(wBnd), -1)
+            
+            _, detBnd, _ = gmsh.model.mesh.getJacobians(eTypeBnd, xiBnd, tag=phys_tag)
+            detBnd = detBnd.reshape(-1, len(wBnd))
+
+            # Assemblage du vecteur
+            for i_el in range(len(eNodesBnd)):
+                nodes = eNodesBnd[i_el]
+                dofs = tag_to_dof[nodes]
+                for g in range(len(wBnd)):
+                    for a in range(len(nodes)):
+                        Ia = int(dofs[a])
+                        # Formule : h * T_fluide * Ni * detJ_1D
+                        F[Ia] += wBnd[g] * h_coef * T_fluid * NBnd[g, a] * detBnd[i_el, g]
+        except:
+            continue 
+
+    return F
