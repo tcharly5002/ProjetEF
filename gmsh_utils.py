@@ -4,19 +4,17 @@ import gmsh
 import numpy as np
 import sys
 
-def load_geometry(filename = "sonde.msh"):
+def load_geometry(d_p=2.0):   ## d_p = distance entre les deux tubes, on peut la changer pour voir l'effet sur le maillage et les résultats
     gmsh.initialize()
-    gmsh.open(filename)
 
     #param géométrie de notre sonde
-    L_sol = 10.0 # Longueur du sol (peut être changée selon les besoins)
-    R_tube = 0.5 # Rayon des tubes (peut être changé selon les besoins)
-    d_p = 2.0 # Distance entre les centres des tubes (peut être changée selon les besoins)
+    L_sol = 10.0
+    R_tube = 0.5
 
 
     #taille des mailles 
-    lc_tube = 0.005 # Taille de la maille pour les tubes (peut être changée selon les besoins)
-    lc_sol = 0.5 # Taille de la maille pour le sol (peut être changée selon les besoins)
+    lc_tube = 0.02 # Taille de la maille pour les tubes (peut être changée selon les besoins)
+    lc_sol = 0.4 # Taille de la maille pour le sol (peut être changée selon les besoins)
 
     #création des surfaces du sol et des tubes
     #rectangle centré en (0,0) de longueur L_sol et de largeur L_sol
@@ -26,10 +24,11 @@ def load_geometry(filename = "sonde.msh"):
     tube1 = gmsh.model.occ.addDisk(-d_p/2, 0, 0, R_tube, R_tube)
     tube2 = gmsh.model.occ.addDisk(d_p/2, 0, 0, R_tube, R_tube)
 
-    #chat -> soustraction booléene : sol = rectangle - tube1 - tube2
+    # en gros ici on stock dans outsurface la surface résultante de [(2, rectangle)] moins ceci : [(2, tube1), (2, tube2)] où les 2 veulent simplement dire 2D
+    #puis out_map on va pas s'en servir mais c'est nécessaire de le mettre car la fonction renvoie 2 trucs
     out_surface, out_map = gmsh.model.occ.cut([(2, rectangle)], [(2, tube1), (2, tube2)])
     gmsh.model.occ.synchronize() #synchronisation pour que les changements soient pris en compte
-    # -> out_surface, out_map je ne comprends pas bien.
+   
 
     # création des frontières
     curves = gmsh.model.getEntities(1)  # Récupérer les courbes (lignes)
@@ -49,7 +48,7 @@ def load_geometry(filename = "sonde.msh"):
         if abs(x) > L_sol/2 - tolerance or abs(y) > L_sol/2 - tolerance:
             boundary_ext.append(tag)
 
-        #vérif si c'est les tubes
+        #vérif quel tube est quel tube
         elif x < -tube_threshold:
             boundary_in.append(tag)
         elif x > tube_threshold:
@@ -77,26 +76,37 @@ def load_geometry(filename = "sonde.msh"):
     #rien compris en desous
 
 
-    #maillage 
-    #on force une taille de maille plus fine autour des tubes
-    gmsh.model.occ.synchronize()
-    points = gmsh.model.getEntities(0)  # Récupérer les points
-    tube_centers = [(-d_p / 2, 0.0), (d_p / 2, 0.0)]
-    tube_influence_radius = R_tube + 0.1
+    #maillage
+    # Gmsh utilise des "champs" pour contrôler la taille des mailles.
+    # On crée deux champs qui travaillent ensemble : Distance puis Threshold.
+    field = gmsh.model.mesh.field
 
-    for dim, tag in points:
-        com = gmsh.model.occ.getCenterOfMass(dim, tag)
-        x, y = com[0], com[1]
+    # Champ 1 : Distance
+    # Calcule, pour chaque point du domaine, sa distance aux courbes des tubes.
+    dist = field.add("Distance")
+    field.setNumbers(dist, "CurvesList", boundary_in + boundary_out)
 
-        if any((x - cx) ** 2 + (y - cy) ** 2 <= tube_influence_radius ** 2 for cx, cy in tube_centers):
-            gmsh.model.mesh.setSize([(dim, tag)], lc_tube)
-        else:
-            gmsh.model.mesh.setSize([(dim, tag)], lc_sol)
+    # Champ 2 : Threshold (seuil)
+    # Utilise les distances calculées par le champ Distance pour fixer la taille de maille :
+    # - si distance < DistMin (0.1) → taille = SizeMin (lc_tube, maille fine)
+    # - si distance > DistMax (1.0) → taille = SizeMax (lc_sol, maille grossière)
+    # - entre les deux → interpolation linéaire
+    thresh = field.add("Threshold")
+    field.setNumber(thresh, "InField", dist)   # on branche le champ Distance en entrée
+    field.setNumber(thresh, "SizeMin", lc_tube)
+    field.setNumber(thresh, "SizeMax", lc_sol)
+    field.setNumber(thresh, "DistMin", 0.1)
+    field.setNumber(thresh, "DistMax", 1.0)
+
+    # On dit à Gmsh d'utiliser ce champ comme référence pour générer le maillage
+    field.setAsBackgroundMesh(thresh)
 
     gmsh.model.mesh.generate(2)
     #gmsh.write("sonde.msh") #si on veut sauvegarder le maillage
 
     #Ectraction des données du maillage pour le reste du projet
+    
+    ## IMPORTANT!
     elemType2D = gmsh.model.mesh.getElementType("triangle", 1)
     nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes()
     elemTags, elemNodeTags = gmsh.model.mesh.getElementsByType(elemType2D)
@@ -107,6 +117,8 @@ def load_geometry(filename = "sonde.msh"):
         "out": gmsh.model.mesh.getNodesForPhysicalGroup(1, gmsh.model.getEntitiesForPhysicalName("boundary_out")[0][1])[0]
     }
 
+
+### juste avoir le visu du maillage dans gmsh
     if 'visu' in sys.argv:
         gmsh.fltk.run()
 
@@ -122,3 +134,8 @@ if __name__ == "__main__":
     load_geometry()
     gmsh.finalize() #ici on peut le mettre parce que c'est juste un test pour voir la géométrie, pas besoin de garder les données en mémoire après.
     
+
+
+
+### POUR LANCER LE MAILLAGE, FAIRE LA COMMANDE DANS LE TERMINAL :
+# python gmsh_utils.py visu
