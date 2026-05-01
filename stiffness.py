@@ -34,17 +34,17 @@ def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kap
         dof_indices = tag_to_dof[nodes] #traduit les "tags de Gmsh" en indices de la matrice K (1, 1, 2,...)
 
         for g in range(ngp): #on boucle sur les points de gauss de l'élément
-            wg = w[g] #poids du point de gauss g -> ??
+            wg = w[g] #poids du point de gauss g 
             detg = det[e, g] #taille du triangle (élément) à cet endroit
             invjac = np.linalg.inv(jac[e, g]) #inverse du jacobien pour ce point de gauss 
 
             for a in range(nloc):
                 Ia = int(dof_indices[a]) #ligne dans la matrice
-                gradNa = gN[g, a, :] @ invjac #gradient de Ni dans les coordonnées physiques
+                gradNa = invjac @ gN[g, a,:] #gradient de Ni dans les coordonnées physiques
 
                 for b in range(nloc):
                     Ib = int(dof_indices[b]) #indice du noeud b dans la matrice K
-                    gradNb = gN[g, b, :] @ invjac #gradient de Nj dans les coordonnées physiques
+                    gradNb = invjac @ gN[g, b,:]#gradient de Nj dans les coordonnées physiques
 
                     #formule finale
                     #poids * kappa * (grad(Ni) . grad(Nj)) * det(J)
@@ -91,10 +91,10 @@ def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kap
                             Ib = int(dofs[b])
                             # Formule : h * Ni * Nj * detJ_1D
                             K[Ia, Ib] += wBnd[g] * h_coef * NBnd[g,a] * NBnd[g,b] * detBnd[i_el, g]
-        except:
-            print(f"Erreur ou absence de la frontière boundary_{tube_key}")
+        except Exception as e:
+            print(f"Erreur boundary_{tube_key} : {e}")
 
-
+    return K
 
 
 """
@@ -141,7 +141,7 @@ def assemble_rhs_robin(num_dofs, tag_to_dof, h_coef, T_f_in, T_f_out, order):
                         Ia = int(dofs[a])
                         # Formule : h * T_fluide * Ni * detJ_1D
                         F[Ia] += wBnd[g] * h_coef * T_fluid * NBnd[g, a] * detBnd[i_el, g]
-        except:
-            continue 
+        except Exception as e:
+            print(f"Erreur boundary_{tube_key} : {e}")
 
     return F
