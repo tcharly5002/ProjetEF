@@ -10,22 +10,22 @@ L'objectif est de modéliser la diffusion de chaleur dans le sol autour d'une so
 
 # ->Caractéristiques du modèle
 * Physique : Équation de la chaleur (diffusion thermique).
-* Conditions aux limites : 
-    * Robin : Échange convectif entre le fluide des tubes et le sol (coefficient h).
-    * Dirichlet : Température constante imposée aux limites  du domaine.
+* Conditions aux limites :    
+**  Robin : Échange convectif entre le fluide des tubes et le sol (coefficient h).
+**  Dirichlet : Température constante imposée aux limites  du domaine.
 * Schéma temporel : Schéma en thêta (Euler implicite utilisé pour la stabilité).
 * Maillage : Généré via Gmsh, on a resserré le maillage autour des tubes pour être plus précis là où les échanges de chaleur sont les plus forts.
 
 # Installation
 
 1. Créer un environnement virtuel :
-   python -m venv .venv
+python -m venv .venv
 
 2. Activer l'environnement :
-   Windows : .venv\Scripts\activate
+Windows : .venv\Scripts\activate
 
 3. Installer les dépendances :
-   pip install numpy scipy matplotlib gmsh
+pip install numpy scipy matplotlib gmsh
 
 # Utilisation
 

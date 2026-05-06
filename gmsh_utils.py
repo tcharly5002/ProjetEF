@@ -12,7 +12,6 @@ def border_dofs_from_tags(l_tags, tag_to_dof):
     l_dofs = tag_to_dof[l_tags[valid_mask]]
     return l_dofs
 
-
 def prepare_quadrature_and_basis(elemType, order):
     """
     Returns:
