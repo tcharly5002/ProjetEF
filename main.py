@@ -11,17 +11,8 @@ import physics_temp
 import dirichlet
 from stiffness import assemble_rhs_robin
 
-#############################################################################
 
-#BON ICI C EST ENCORE BCP L IA MAIS LE BUT C4EST DE COMPRENDRE ET MODIFIER CE QUI VA PAS
-#PUIS ON REND LE TRUC UN PEU PLUS "HUMAIN" 
-
-###############################################################################
-
-
-# ==============================================================================
-# PARAMÈTRES PHYSIQUES
-# ==============================================================================
+# paramètres physiques : 
 RHO    = 2500.0   # kg/m³
 CP     = 800.0    # J/kg/K
 K_SOL  = 30    # W/m/K
@@ -31,15 +22,14 @@ T_START_OUT = 3600  # le tube retour démarre 1h après
 T_INIT = 8.0        # température initiale du sol
 T_BORD = 8.0        # même chose au bord
 
-# Paramètres simulation
+# paramètres simulation
 DT      = 600.0        # pas de temps en secondes (10 min)
 N_STEPS = 24 * 6       # 1 journée
 THETA   = 1.0          # Euler implicite (stable)
 ORDER   = 1
 
-# ==============================================================================
-# 1. CHARGEMENT DU MAILLAGE
-# ==============================================================================
+# CHARGEMENT DU MAILLAGE
+
 elemType2D, nodeTags, nodeCoords, elemTags, elemNodeTags, boundaries = gmsh_utils.load_geometry()
 
 # Construction de tag_to_dof : tag Gmsh -> indice dans la matrice
@@ -55,15 +45,13 @@ nodeCoords = np.array(nodeCoords).reshape(-1, 3)
 x_nodes = nodeCoords[:, 0]
 y_nodes = nodeCoords[:, 1]
 
-# ==============================================================================
-# 2. QUADRATURE ET FONCTIONS DE FORME
-# ==============================================================================
+# QUADRATURE ET FONCTIONS DE FORME
+
 xi, w, N, gN = gmsh_utils.prepare_quadrature_and_basis(elemType2D, ORDER)
 jac, det, xphys = gmsh_utils.get_jacobians(elemType2D, xi)
 
-# ==============================================================================
-# 3. ASSEMBLAGE M ET K (une seule fois, hors boucle temps)
-# ==============================================================================
+
+# ASSEMBLAGE M ET K (une seule fois, hors boucle temps)
 print("Assemblage de la matrice de masse M...")
 M_raw = mass.compute_mass_matrix(elemTags, elemNodeTags, det, w, N, tag_to_dof)
 M = csr_matrix(RHO * CP * M_raw)
@@ -79,21 +67,17 @@ K = csr_matrix(stiffness.assemble_stiffness_and_robin(
     order=ORDER
 ))
 
-# ==============================================================================
-# 4. CONDITIONS AUX LIMITES DIRICHLET (bord extérieur)
-# ==============================================================================
+
+# CONDITIONS AUX LIMITES DIRICHLET (bord extérieur)
 ext_dofs = gmsh_utils.border_dofs_from_tags(boundaries["ext"], tag_to_dof)
 dir_vals = np.full(len(ext_dofs), T_BORD)
 
-# ==============================================================================
-# 5. CONDITION INITIALE
-# ==============================================================================
+
+# CONDITION INITIALE
 U_n = np.full(nn, T_INIT, dtype=float)
 U_n[ext_dofs] = T_BORD  # cohérence avec Dirichlet
 
-# ==============================================================================
-# 6. BOUCLE EN TEMPS
-# ==============================================================================
+# BOUCLE EN TEMPS
 print("Début de la simulation...")
 
 # F au temps 0
@@ -126,9 +110,7 @@ for step in range(1, N_STEPS + 1):
               f"  |  T_min = {U_n.min():.2f}°C  |  T_max = {U_n.max():.2f}°C")
     T_history.append(U_n.copy())
 
-# ==============================================================================
-# 7. VISUALISATION — animation temporelle
-# ==============================================================================
+# VISUALISATION — animation temporelle
 import matplotlib.animation as animation
 
 conn_plot = np.array(elemNodeTags, dtype=int).reshape(-1, 3)

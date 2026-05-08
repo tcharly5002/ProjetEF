@@ -4,9 +4,9 @@ import scipy.sparse as sp
 from scipy.sparse import lil_matrix
 
 
-# ==============================================================================
+# explication reformulé via l'ia de ce fichier mass.py
 # PASSAGE DE L'INTÉGRALE AU CODE : LA MATRICE DE MASSE (M)
-# ==============================================================================
+#
 # FORMULE : M_ij = ∫_Ω (Ni * Nj) dΩ  ≈  Σ_e [ Σ_g (w_g * Ni(g) * Nj(g) * det(J)_g) ]
 #
 # 1. DISCRÉTISATION SPATIALE :

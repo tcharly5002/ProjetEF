@@ -7,7 +7,7 @@ import gmsh
 def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kappa, h_coef, boudaries, tag_to_dof, order):
     """
     Assemblage de la matrice de rigidité (k)
-    1. partie conduction :
+    1. partie conduction
     2. partie Robin 
     """
 
@@ -18,9 +18,9 @@ def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kap
 
     K = lil_matrix((nn, nn), dtype=np.float64) #matrice de rigidité vide
 
-    #===============+ partie conduction +=================
+    #partie conduction:
     #FORMULE : k[i,j] = ∫(k * grad(Ni) . grad(Nj)) dΩ
-    #=================
+    
 
     #redimensionnement des listes plates de Gmsh pour aller dedans plus facilement
 
@@ -50,9 +50,8 @@ def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kap
                     #poids * kappa * (grad(Ni) . grad(Nj)) * det(J)
                     K[Ia, Ib] += wg * kappa * np.dot(gradNa, gradNb) * detg
 
-    #===============+ partie Robin +=================
+    # partie Robin:
     #FORMULE : k[i,j] += ∫(h * Ni * Nj) dΓ
-    #=================
 
     #on récupère les éléments de bordure pour les tubes in et out
     for tube_key in ["in", "out"]:
@@ -60,7 +59,7 @@ def assemble_stiffness_and_robin (elemTags, conn, jac, det, xphys, w, N, gN, kap
         #on suppose que noundary_in/out sont des physical groups de dimension 1 (ligne) dans Gmsh
         dim_bnd = 1
         try :
-            #Ici on demande à Gmsh :"Donne moi tout les petits segments de droite qui forme le cercle du tube d'entrée/sortie"
+            #récupération de chacun des petits segments de droite formants les "cerlces" des tubes
             phys_tag = gmsh.model.getEntitiesForPhysicalName(f"boundary_{tube_key}")[0][1]
             elemTypesBnd, elemTagsBnd, elemNodeTagsBnd = gmsh.model.mesh.getElements(dim_bnd, phys_tag)
 
@@ -102,11 +101,6 @@ Maintenant on va faire la partie de droite de notre équation c-a-d le vecteur d
 dû à la température du fluide dans les tubes d'entrée et de sortie.
 Formule : f[i] = ∫(h * T_fluid * Ni) dΓ
 """
-
-
-#=============+
-#celui là j'avais la flemme de tout vérif je pense qu'il est juste mais peut-être à revoir
-#=============+
 
 
 def assemble_rhs_robin(num_dofs, tag_to_dof, h_coef, T_f_in, T_f_out, order):

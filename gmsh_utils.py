@@ -5,13 +5,12 @@ import numpy as np
 import sys
 
 def border_dofs_from_tags(l_tags, tag_to_dof):
-    # Convertit les tags Gmsh (non consécutifs) en indices 0-based dans la matrice globale
+    # convertit les tags Gmsh (pas consécutifs) en indices dans la matrice globale
     l_tags = np.asarray(l_tags, dtype=int)
-    # tag_to_dof[tag] vaut -1 si le tag n'a pas de DoF associé (ex: points géométriques purs)
+    # tag_to_dof[tag] vaut -1 si le tag n'a pas de dof associé (pt geometrique pur par ex)
     valid_mask = (tag_to_dof[l_tags] != -1)
     l_dofs = tag_to_dof[l_tags[valid_mask]]
     return l_dofs
-
 
 def prepare_quadrature_and_basis(elemType, order):
     """
@@ -102,39 +101,35 @@ def load_geometry(d_p=2.0):   ## d_p = distance entre les deux tubes, on peut la
 
 
 
-    #rien compris en desous
-
-
     #maillage
-    # Gmsh utilise des "champs" pour contrôler la taille des mailles.
-    # On crée deux champs qui travaillent ensemble : Distance puis Threshold.
+    # avec gmsh on utilise des zones pour contrôler la taille des mailles.
+    # On crée deux champs qui travaillent ensemble, distance puis threshold.
     field = gmsh.model.mesh.field
 
-    # Champ 1 : Distance
-    # Calcule, pour chaque point du domaine, sa distance aux courbes des tubes.
+    # champ 1, distance
+    # calcule pour chaque point du domaine sa distance aux courbe des tubes.
     dist = field.add("Distance")
     field.setNumbers(dist, "CurvesList", boundary_in + boundary_out)
 
-    # Champ 2 : Threshold (seuil)
-    # Utilise les distances calculées par le champ Distance pour fixer la taille de maille :
+    # champ 2, threshold (seuil)
+    # utilise les distances calculées par le champ distance pour fixer la taille de maille :
     # - si distance < DistMin (0.1) → taille = SizeMin (lc_tube, maille fine)
     # - si distance > DistMax (1.0) → taille = SizeMax (lc_sol, maille grossière)
     # - entre les deux → interpolation linéaire
     thresh = field.add("Threshold")
-    field.setNumber(thresh, "InField", dist)   # on branche le champ Distance en entrée
+    field.setNumber(thresh, "InField", dist)   
     field.setNumber(thresh, "SizeMin", lc_tube)
     field.setNumber(thresh, "SizeMax", lc_sol)
     field.setNumber(thresh, "DistMin", 0.1)
     field.setNumber(thresh, "DistMax", 1.0)
 
-    # On dit à Gmsh d'utiliser ce champ comme référence pour générer le maillage
+    # on dit à gmsh d'utiliser ce champ comme référence pour générer le maillage
     field.setAsBackgroundMesh(thresh)
 
     gmsh.model.mesh.generate(2)
     #gmsh.write("sonde.msh") #si on veut sauvegarder le maillage
 
-    #Ectraction des données du maillage pour le reste du projet
-    
+    #exctraction des données du maillage pour le reste du projet
     ## IMPORTANT!
     elemType2D = gmsh.model.mesh.getElementType("triangle", 1)
     nodeTags, nodeCoords, _ = gmsh.model.mesh.getNodes()
@@ -150,13 +145,6 @@ def load_geometry(d_p=2.0):   ## d_p = distance entre les deux tubes, on peut la
 ### juste avoir le visu du maillage dans gmsh
     if 'visu' in sys.argv:
         gmsh.fltk.run()
-
-    # === ATTENTION ===
-    # J'ai retiré gmsh.finalize() car si on ferme ici, les données nodeTags, etc. 
-    # disparaissent de la mémoire avant que le main.py puisse les lire.
-    # On fermera Gmsh à la toute fin du projet.
-    # ==================pas oublié de faire ça dans le main===
-    
     return elemType2D, nodeTags, nodeCoords, elemTags, elemNodeTags, boundaries
 
 if __name__ == "__main__":
