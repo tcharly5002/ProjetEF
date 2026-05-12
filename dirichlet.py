@@ -32,19 +32,6 @@ def apply_dirichlet_by_reduction(A, b, dirichlet_dofs, dirichlet_values):
     return A_FF, b_red, free_dofs, U_full
 
 
-def solve_dirichlet(A, b, dirichlet_dofs, dirichlet_values):
-   
-    A_red, b_red, free_dofs, U_full = apply_dirichlet_by_reduction(A,b,dirichlet_dofs,dirichlet_values)
-    U_free = spsolve(A_red.tocsr(), b_red) # le toscr() est une maniere plus adaptée pour le solve 
-    #Resoudre A_red U_free = b_red
-    U_full[free_dofs] = U_free # la on les met de nouveau dans la matrice complete UFULL
-    U_full[dirichlet_dofs] = dirichlet_values
-
-    return U_full
-
-    # Ici notre U contient donc que les valeurs de dirichlet [100, 0 , 20,]
-
-
 def theta_step(M, K, F_n, F_np1, U_n, dt, theta, dirichlet_dofs, dir_vals_np1):
     """
     Effectue un pas de temps pour :
